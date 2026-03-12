@@ -18,3 +18,12 @@ else: Este bloco so sera executado pelo processo pai.
 getpid(): Retorna o ID do processo atual.
 getppid(): Retorna o ID do processo pai do processo atual.
 wait(NULL): Faz o pai pausar ate que o filho termine sua execucao.
+
+
+__________
+
+## LAB 04
+
+
+A compilacao com Pthreads requer uma flag especial, -pthread.
+gcc -o race_condition race_condition.c -Wall -pthread
