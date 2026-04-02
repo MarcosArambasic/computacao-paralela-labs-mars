@@ -46,7 +46,8 @@ typedef struct {
 } ArgThread;
 
 /* ===================== GLOBAIS (IGUAIS AO ORIGINAL) ===================== */
-
+    //Serao preenchidas somente apos a execucao das threads 
+        // Na func  reduzir_resultados
 static EstatSensor g_sensores[MAX_SENSORES];
 static int         g_num_sensores = 0;
 
@@ -57,7 +58,7 @@ static Anomalia g_anomalias[MAX_ANOMALIAS];
 static int      g_num_anomalias = 0;
 
 /* ===================== WORKER OTIMIZADO ===================== */
-
+    //Funcao que e usada dentro da thread, sem concorrencia
 static int encontrar_ou_criar_local(
         EstatSensor *vet, int *n, const char *id)
 {
@@ -75,6 +76,17 @@ static int encontrar_ou_criar_local(
     vet[idx].soma_quadrados = 0.0;
     return idx;
 }
+
+
+/* ===================== FUNÇÃO WORKER DAS THREADS ===================== */
+/*
+Executado por cada thread, onde ele atualiza apenas os contadores locais.
+
+Não usa mutex no laço principal, cada thread atualiza os valores na sua 
+própria estrutura ArgThread, reduzindo a contencao em relacao ao mutex
+global
+
+*/
 
 static void *processar_fatia_otimizada(void *arg)
 {
@@ -120,7 +132,11 @@ static void *processar_fatia_otimizada(void *arg)
     return NULL;
 }
 
-/* ===================== REDUÇÃO FINAL ===================== */
+/* ===================== CONSOLIDACAO DO RESULTADOS ===================== */
+//Basicamente reduz os resultados de todas as threads nas estruturas globais
+
+//A reducao é sequencial, mas o custo de tempo dela costuma ser pequeno comparado 
+//ao ganho de eliminar mutex no processamento principal.
 
 static void reduzir_resultados(ArgThread *args, int nthreads)
 {
@@ -149,6 +165,10 @@ static void reduzir_resultados(ArgThread *args, int nthreads)
     }
 }
 
+/* ===================== CALCULO E DETECAO DE ANOMALIAS ===================== */
+
+//Faz as contas e Detecta leituras de anomalia de temperatura
+ //e anomalida quando = (valor - media) > (3 * desvio_padrao)
 static void detectar_anomalias(const Arquivo *arq)
 {
     double medias[MAX_SENSORES];
@@ -195,6 +215,7 @@ static void detectar_anomalias(const Arquivo *arq)
     }
 }
 
+/* ===================== CARGA E LEITURA DO ARQUIVO LOG ===================== */
 static int carregar_arquivo(const char *caminho, Arquivo *arq)
 {
     FILE *fp = fopen(caminho, "r");
@@ -229,6 +250,7 @@ static void liberar_arquivo(Arquivo *arq)
     free(arq->linhas);
 }
 
+/* ===================== FUNCAO PRINCIPAL ===================== */
 int main(int argc, char *argv[])
 {
     if (argc < 3) {
